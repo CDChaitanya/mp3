@@ -52,7 +52,7 @@ module.exports = function (router) {
         try {
             var id = req.params.id;
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return fail(res, 'User not found', 404);
+                return fail(res, 'User Invalid', 400);
             }
             var select = parseJSON(req.query.select, undefined);
             var q = User.findById(id);
@@ -92,7 +92,7 @@ module.exports = function (router) {
         try {
             var id = req.params.id;
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return fail(res, 'User not found', 404);
+                return fail(res, 'User Invalid', 400);
             }
             var body = req.body || {};
             var name = body.name;
@@ -175,7 +175,7 @@ module.exports = function (router) {
         try {
             var id = req.params.id;
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return fail(res, 'User not found', 404);
+                return fail(res, 'User Invalid', 400);
             }
             var user = await User.findById(id);
             if (!user) return fail(res, 'User not found', 404);

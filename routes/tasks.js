@@ -88,7 +88,7 @@ module.exports = function (router) {
         try {
             var id = req.params.id;
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return fail(res, 'Task not found', 404);
+                return fail(res, 'Task Invalid', 400);
             }
             var select = parseJSON(req.query.select, undefined);
             var q = Task.findById(id);
@@ -131,7 +131,7 @@ module.exports = function (router) {
         try {
             var id = req.params.id;
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return fail(res, 'Task not found', 404);
+                return fail(res, 'Task Invalid', 400);
             }
             var body = req.body || {};
             var name = body.name;
@@ -180,7 +180,7 @@ module.exports = function (router) {
         try {
             var id = req.params.id;
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return fail(res, 'Task not found', 404);
+                return fail(res, 'Task Invalid', 400);
             }
             var task = await Task.findById(id);
             if (!task) return fail(res, 'Task not found', 404);
