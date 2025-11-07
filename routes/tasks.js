@@ -20,9 +20,8 @@ module.exports = function (router) {
         var where  = parseJSON(req.query.where, {});
         var sort   = parseJSON(req.query.sort, undefined);
         var select = parseJSON(req.query.select, undefined);
-        var skip   = req.query.skip !== undefined ? parseInt(req.query.skip, 10) : undefined;
-        var limitDefault = 100;
-        var limit  = req.query.limit !== undefined ? parseInt(req.query.limit, 10) : limitDefault;
+        var skip   = req.query.skip !== undefined ? parseInt(req.query.skip) : undefined;
+        var limit  = req.query.limit !== undefined ? parseInt(req.query.limit) : undefined;
         var count  = (req.query.count === 'true' || req.query.count === true);
 
         var q = model.find(where);
