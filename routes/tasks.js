@@ -107,13 +107,39 @@ module.exports = function (router) {
             var deadline = body.deadline;
             if (!name || !deadline) return fail(res, 'Task name and deadline are required', 400);
 
+            var assignedUser = body.assignedUser || '';
+            var assignedUserName = 'unassigned';
+
+            if (assignedUser) {
+                if (!mongoose.Types.ObjectId.isValid(assignedUser)) {
+                    return fail(res, 'Invalid user ID', 400);
+                }
+                var user = await User.findById(assignedUser);
+                if (!user) {
+                    return fail(res, 'Assigned user does not exist', 404);
+                }
+
+                if (body.assignedUserName !== undefined) {
+                    if (body.assignedUserName !== user.name) {
+                        return fail(res, 'Assigned user name does not match the user', 400);
+                    }
+                    assignedUserName = body.assignedUserName;
+                } else {
+                    assignedUserName = user.name;
+                }
+            } else {
+                if (body.assignedUserName !== undefined && body.assignedUserName !== 'unassigned') {
+                    assignedUserName = body.assignedUserName;
+                }
+            }
+
             var task = await Task.create({
                 name: name,
                 description: body.description || '',
                 deadline: deadline,
                 completed: body.completed === true,
-                assignedUser: body.assignedUser || '',
-                assignedUserName: body.assignedUserName !== undefined ? body.assignedUserName : 'unassigned'
+                assignedUser: assignedUser,
+                assignedUserName: assignedUserName
             });
 
             await syncUserPending(task, null);
@@ -147,13 +173,30 @@ module.exports = function (router) {
                 return fail(res, 'Cannot modify a completed task', 400);
             }
 
-            if (body.assignedUser) {
-                if (!mongoose.Types.ObjectId.isValid(body.assignedUser)) {
+            var assignedUser = body.assignedUser !== undefined ? body.assignedUser : task.assignedUser;
+            var assignedUserName = task.assignedUserName;
+
+            if (assignedUser) {
+                if (!mongoose.Types.ObjectId.isValid(assignedUser)) {
                     return fail(res, 'Invalid user ID', 400);
                 }
-                var userExists = await User.findById(body.assignedUser);
-                if (!userExists) {
+                var user = await User.findById(assignedUser);
+                if (!user) {
                     return fail(res, 'Assigned user does not exist', 404);
+                }
+
+                if (body.assignedUserName !== undefined) {
+                    if (body.assignedUserName !== user.name) {
+                        return fail(res, 'Assigned user name does not match the user', 400);
+                    }
+                    assignedUserName = body.assignedUserName;
+                } else {
+                    assignedUserName = user.name;
+                }
+            } else {
+                assignedUserName = 'unassigned';
+                if (body.assignedUserName !== undefined && body.assignedUserName !== 'unassigned') {
+                    assignedUserName = body.assignedUserName;
                 }
             }
 
@@ -163,8 +206,8 @@ module.exports = function (router) {
             task.description = body.description || '';
             task.deadline = deadline;
             task.completed = completed !== undefined ? !!completed : task.completed;
-            task.assignedUser = body.assignedUser || '';
-            if (body.assignedUserName !== undefined) task.assignedUserName = body.assignedUserName;
+            task.assignedUser = assignedUser || '';
+            task.assignedUserName = assignedUserName;
 
             await syncUserPending(task, prevAssigned);
             await task.save();
