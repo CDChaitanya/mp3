@@ -148,6 +148,16 @@ module.exports = function (router) {
                 return fail(res, 'Cannot modify a completed task', 400);
             }
 
+            if (body.assignedUser) {
+                if (!mongoose.Types.ObjectId.isValid(body.assignedUser)) {
+                    return fail(res, 'Invalid user ID', 400);
+                }
+                var userExists = await User.findById(body.assignedUser);
+                if (!userExists) {
+                    return fail(res, 'Assigned user does not exist', 404);
+                }
+            }
+
             var prevAssigned = task.assignedUser || '';
 
             task.name = name;

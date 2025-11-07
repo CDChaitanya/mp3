@@ -70,36 +70,17 @@ module.exports = function (router) {
             var body = req.body || {};
             var name = body.name;
             var email = body.email;
-            var pendingTasks = body.pendingTasks || [];
 
             if (!name || !email) return fail(res, 'Name and email are required', 400);
+            if (body.pendingTasks !== undefined) {
+                return fail(res, 'Cannot set pendingTasks when creating a user', 400);
+            }
 
             var exists = await User.findOne({ email: email }).lean();
             if (exists) return fail(res, 'Email already exists', 400);
 
-            if (pendingTasks && pendingTasks.length) {
-                var tasks = await Task.find({ _id: { $in: pendingTasks } });
-                
-                if (tasks.length !== pendingTasks.length) {
-                    return fail(res, 'One or more task IDs do not exist', 400);
-                }
-                
-                var completedTask = tasks.find(function(t) { return t.completed === true; });
-                if (completedTask) {
-                    return fail(res, 'Cannot add completed tasks to pending tasks', 400);
-                }
-            }
+            var user = await User.create({ name, email, pendingTasks: [] });
 
-            var user = await User.create({ name, email, pendingTasks });
-
-            if (pendingTasks && pendingTasks.length) {
-                var tasks = await Task.find({ _id: { $in: pendingTasks } });
-                await Promise.all(tasks.map(async function (t) {
-                    t.assignedUser = user._id.toString();
-                    t.assignedUserName = user.name;
-                    await t.save();
-                }));
-            }
             return ok(res, user, 'Created', 201);
         } catch (err) {
             var msg = err && err.errors ? Object.values(err.errors).map(e=>e.message).join('; ') : 'Failed to create user';
@@ -129,10 +110,17 @@ module.exports = function (router) {
             }
 
             if (pendingTasks && pendingTasks.length) {
+                var invalidIds = pendingTasks.filter(function(tid) { 
+                    return !mongoose.Types.ObjectId.isValid(tid); 
+                });
+                if (invalidIds.length > 0) {
+                    return fail(res, 'Tasks are invalid', 400);
+                }
+
                 var tasks = await Task.find({ _id: { $in: pendingTasks } });
                 
                 if (tasks.length !== pendingTasks.length) {
-                    return fail(res, 'One or more task IDs do not exist', 400);
+                    return fail(res, 'more than one task IDs do not exist', 404);
                 }
                 
                 var completedTask = tasks.find(function(t) { return t.completed === true; });
@@ -145,6 +133,7 @@ module.exports = function (router) {
             var nextSet = new Set((pendingTasks || []).map(String));
             var toAdd = Array.from(nextSet).filter(x => !prevSet.has(x));
             var toRemove = Array.from(prevSet).filter(x => !nextSet.has(x));
+            var nameChanged = user.name !== name;
 
             user.name = name;
             user.email = email;
@@ -168,6 +157,12 @@ module.exports = function (router) {
                     t.assignedUserName = user.name;
                     await t.save();
                 }));
+            }
+            if (nameChanged) {
+                await Task.updateMany(
+                    { assignedUser: id },
+                    { assignedUserName: user.name }
+                );
             }
 
             return ok(res, user);
